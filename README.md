@@ -26,7 +26,7 @@ Step 2.2 (Optional/Recommended) It is important to reconstruct the mapping betwe
  eval $(sudo ovs-ofctl dump-ports-desc s2 |sed -n '/^ [0-9]/s/^ *//p' |awk -v FS='\\(|\\)' '{print toupper($2) "=" $1}' |sed 's/-/_/')
  eval $(sudo ovs-ofctl dump-ports-desc s3 |sed -n '/^ [0-9]/s/^ *//p' |awk -v FS='\\(|\\)' '{print toupper($2) "=" $1}' |sed 's/-/_/')
  
- Step 3: Implement the Rules to the switches
+ Step 3: Implement the Rules to the switches (* currently facing an issue of assigning the in_port values, port values are out of range)
  
 Rule at S1:
 

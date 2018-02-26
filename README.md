@@ -9,5 +9,5 @@ Steps to create virtual Switches using mininet and Openflow Communication protoc
 Step 1: Install mininet (Run the below Command)
 sudo apt install mininet
 
-Step 2: Run the following command to implement 3 switches within the mininet virtual network 
+Step 2: Run the following command to implement 3 switches within the mininet virtual network
 sudo mn --topo single,3 --controller remote --switch ovsk,protocol=OpenFlow13

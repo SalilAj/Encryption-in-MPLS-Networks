@@ -13,3 +13,10 @@ sudo apt install mininet
 Step 2: Run the following command to implement 3 switches within the mininet virtual network
 
 sudo mn --topo single,3 --controller remote --switch ovsk,protocol=OpenFlow13
+
+Reference:
+http://tocai.dia.uniroma3.it/compunet-wiki/index.php/MPLS_with_OpenFlow:_howto#Setup_of_OpenFlow_rules_.28Open_vSwitch.29
+
+https://github.com/mininet/openflow-tutorial/wiki
+
+docs.openvswitch.org/en/latest/tutorials/

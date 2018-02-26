@@ -56,6 +56,4 @@ Step X: Test the connection between the switches by calling 'pingall' in the min
 Reference:
 http://tocai.dia.uniroma3.it/compunet-wiki/index.php/MPLS_with_OpenFlow:_howto#Setup_of_OpenFlow_rules_.28Open_vSwitch.29
 
-https://github.com/mininet/openflow-tutorial/wiki
-
-docs.openvswitch.org/en/latest/tutorials/
+https://github.com/mininet/openflow-tutorial/wiki/docs.openvswitch.org/en/latest/tutorials/

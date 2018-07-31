@@ -4,7 +4,10 @@ This is an ongoing research for my Dissertation involving implementation of Encr
 Configurations used:
 
 
-The project aims to simulate a network consisting of 3 MPLS switches (OVS) communicating with eachother on a virtual network (mininet) with an added functionality of encryption in the MPLS payload as specified in https://tools.ietf.org/html/draft-ietf-mpls-opportunistic-encrypt-03
+The project aims to simulate a network consisting of 3 MPLS switches (OVS)
+communicating with eachother on a virtual network (mininet) with an added
+functionality of encryption in the MPLS payload as specified in
+[the Internet-draft](https://tools.ietf.org/html/draft-ietf-mpls-opportunistic-encrypt-03)
 
 The project implementation consists of 4 parts:
 1) Initial considerations:</br>

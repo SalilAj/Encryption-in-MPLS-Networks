@@ -21,7 +21,8 @@ The project implementation consists of 4 parts:
 3) OpenVSwitch setup:</br>
 	The OpenVSwitch code needs to be compiled and its kernel modules needs to be created. </br>
 	This module is then installed and loaded in the linux kernel.</br>
-	Navigate inside 'ovs' folder and run the "2-OVSSetup.sh" script.</br>
+	Navigate inside 'ovs' folder and run the "2-OVSSetup1.sh" script. This will build the ovs code</br>
+	If the build was successful, run "2-OVSSetup2.sh" script. This will install the new module and load it on the kernel.</br>
 
 4) Project execution:</br>
 	We start by first creating our virtual network and the OpenVSwitch switches in this network.</br>

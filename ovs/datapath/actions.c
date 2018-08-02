@@ -188,6 +188,7 @@ static void update_ethertype(struct sk_buff *skb, struct ethhdr *hdr,
 
 static void encrypt_data(struct sk_buff *skb)
 {
+	/*
 	char * data = skb_mac_header(skb) + skb->mac_len; //skb->data;
 	//printk("\n\nREACHED ENCRYPTION\n\n");
 	uint32_t messagelen = skb->len - skb->mac_len;//skb_headlen(skb);
@@ -203,7 +204,111 @@ static void encrypt_data(struct sk_buff *skb)
 		//printk("PPPPPPPPPPPP data1=%c\n", data[i]);
 	    data[i] = data[i] ^ 1;
 	    //printk("PPPPPPPPPPPP data2=%c", data[i]);
-	}
+	}*/
+	printk("ZZZZZZZZZZStarting encryption\n");
+
+	uint32_t messagelen = skb->len - skb->mac_len;
+
+    struct crypto_aead *tfm = NULL;
+    struct aead_request *req;
+    struct tcrypt_result *tresult;
+
+    struct scatterlist plaintext[1] ;
+    struct scatterlist ciphertext[1];
+    struct scatterlist gmactext[1];
+
+    char *plaindata = skb_mac_header(skb) + skb->mac_len;
+    char *cipherdata = NULL;
+    char *gmacdata = NULL;
+    const u8 *key =  kmalloc(16, GFP_KERNEL);
+
+    char *algo = "rfc4106(gcm(aes))";
+    char *ivp = NULL;
+    int ret, i, d;
+    unsigned int iv_len;
+    //unsigned int keylen = 16;
+
+    /* Allocating a cipher handle for AEAD */
+    tfm = crypto_alloc_aead(algo, 0, 0);
+    init_completion(&tresult.completion);
+
+    /*if(IS_ERR(tfm)) {
+        pr_err("alg: aead: Failed to load transform for %s: %ld\n", algo,
+        PTR_ERR(tfm));
+        return PTR_ERR(tfm);
+    }*/
+
+    /* Allocating request data structure to be used with AEAD data structure */
+    req = aead_request_alloc(tfm, GFP_KERNEL);
+    /*if(IS_ERR(req)) {
+        pr_err("Couldn't allocate request handle for %s:\n", algo);
+        return PTR_ERR(req);
+    }*/
+
+    /* Allocting a callback function to be used , when the request completes */
+    aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG, aead_work_done, &tresult);
+
+    crypto_aead_clear_flags(tfm, ~0);
+
+    /* Set key */
+    //SALIL SET KEY HERE
+    //get_random_bytes((void*)key, keylen);
+    for (i = 0; i < 16; i++)
+        key[i] = i;
+
+    if((ret = crypto_aead_setkey(tfm, key, 16) != 0)) {
+        printk("ZZZZZZZZZZZZzReturn value for setkey is %d\n", ret);
+        printk("ZZZZZZZZZzzkey could not be set\n");
+        return;
+    }
+
+    /* Set authentication tag length */
+    if(crypto_aead_setauthsize(tfm, 16)) {
+    	printk("Tag size could not be authenticated\n");
+    	return;
+    }
+
+    /* Set IV size */
+    iv_len = crypto_aead_ivsize(tfm);
+    if (!(iv_len)){
+        printk("IV size could not be authenticated\n");
+        return;
+    }
+
+
+    //plaindata  = kmalloc(16, GFP_KERNEL);
+    cipherdata = kmalloc(messagelen, GFP_KERNEL);
+    gmacdata   = kmalloc(16, GFP_KERNEL); 				//CHECK SIZE
+    ivp        = kmalloc(iv_len, GFP_KERNEL);
+
+    if(!plaindata || !cipherdata || !gmacdata || !ivp) {
+        printk("ZZZZZZZZZZZMemory not availaible\n");
+        return;
+    }
+    
+    //Salil add plain data here
+    //for (i = 0, d = 0; i < 16; i++, d++)
+    //    plaindata[i] = d;
+
+    memset(cipherdata, 0, messagelen);
+    memset(gmacdata, 0, 16);
+
+    //Salil add IV here
+    for (i = 0; i < iv_len; i++)
+        ivp[i] = i;
+
+    sg_init_one(&plaintext[0], plaindata, messagelen);
+    sg_init_one(&ciphertext[0], cipherdata, messagelen);
+    sg_init_one(&gmactext[0], gmacdata, 128);
+    aead_request_set_crypt(req, plaintext, ciphertext, 16, ivp);
+    aead_request_set_assoc(req, gmactext, 16);
+
+    ret = crypto_aead_encrypt(req);
+
+    if (ret)
+        printk("ZZZZZZZZZZZZZZcipher call returns %d \n", ret);
+    else
+        printk("ZZZZZZZZZZZZZZZZZFailure \n");
 }
 
 static void insert_PWCodeWord(struct sk_buff *skb)

@@ -320,7 +320,7 @@ am__append_50 = $(HSTAMP_FILES)
 # effect and a C++ compiler is available, we build a C++ source file
 # that #includes all the public headers, as a way to ensure that they
 # are acceptable as C++.
-#am__append_51 = include/openvswitch/libcxxtest.la
+am__append_51 = include/openvswitch/libcxxtest.la
 #am__append_52 = vswitchd/vswitch.gv vswitchd/vswitch.pic
 #am__append_53 = vtep/vtep.gv vtep/vtep.pic
 #am__append_54 = $(srcdir)/datapath-windows/include/OvsDpInterface.h
@@ -402,15 +402,15 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
 include_openvswitch_libcxxtest_la_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
-#nodist_include_openvswitch_libcxxtest_la_OBJECTS =  \
-#	include/openvswitch/cxxtest.lo
+nodist_include_openvswitch_libcxxtest_la_OBJECTS =  \
+	include/openvswitch/cxxtest.lo
 include_openvswitch_libcxxtest_la_OBJECTS =  \
 	$(nodist_include_openvswitch_libcxxtest_la_OBJECTS)
 AM_V_lt = $(am__v_lt_$(V))
 am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-#am_include_openvswitch_libcxxtest_la_rpath =
+am_include_openvswitch_libcxxtest_la_rpath =
 am__DEPENDENCIES_1 =
 #am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 lib_libopenvswitch_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
@@ -1612,7 +1612,7 @@ ECHO_T =
 EGREP = /bin/grep -E
 EXEEXT = 
 FGREP = /bin/grep -F
-FLAKE8_WERROR = -
+FLAKE8_WERROR = 
 GREP = /bin/grep
 HAVE_CXX11 = 1
 HAVE_LIBCAPNG = 
@@ -1657,7 +1657,7 @@ OBJDUMP = objdump
 OBJEXT = o
 OTOOL = 
 OTOOL64 = 
-OVS_CFLAGS = 
+OVS_CFLAGS =  -Werror -Werror
 OVS_CTAGS_IDENTIFIERS_LIST = -I "OVS_REQ_RDLOCK+ OVS_ACQ_RDLOCK+ OVS_REQ_WRLOCK+ OVS_ACQ_WRLOCK+ OVS_REQUIRES+ OVS_ACQUIRES+ OVS_TRY_WRLOCK+ OVS_TRY_RDLOCK+ OVS_TRY_LOCK+ OVS_GUARDED_BY+ OVS_EXCLUDED+ OVS_RELEASES+ OVS_ACQ_BEFORE+ OVS_ACQ_AFTER+ "
 OVS_LDFLAGS = 
 OVS_LTINFO = -release 2.9 -version-info 0:2
@@ -1690,7 +1690,7 @@ SHELL = /bin/bash
 SPARSE = sparse
 SPARSEFLAGS = -m64
 SPARSE_EXTRA_INCLUDES = -I /usr/local/include -I /usr/include/x86_64-linux-gnu 
-SPARSE_WERROR = 
+SPARSE_WERROR = -Wsparse-error
 SSL_INCLUDES = 
 SSL_LDFLAGS = 
 SSL_LIBS = -lssl -lcrypto
@@ -2976,7 +2976,7 @@ openvswitchinclude_HEADERS = \
 	include/openvswitch/vlog.h \
 	include/openvswitch/nsh.h
 
-#nodist_include_openvswitch_libcxxtest_la_SOURCES = include/openvswitch/cxxtest.cc
+nodist_include_openvswitch_libcxxtest_la_SOURCES = include/openvswitch/cxxtest.cc
 vswitchd_ovs_vswitchd_SOURCES = \
 	vswitchd/bridge.c \
 	vswitchd/bridge.h \
@@ -6036,7 +6036,7 @@ uninstall-man: uninstall-man1 uninstall-man5 uninstall-man7 \
 .PRECIOUS: Makefile
 
 
-#C ?= 1
+C ?= 1
 .in:
 	$(AM_V_GEN)PYTHONPATH=$$PYTHONPATH$(psep)$(srcdir)/python $(PYTHON) $(srcdir)/build-aux/soexpand.py -I$(srcdir) < $< | \
 	  $(PYTHON) $(srcdir)/build-aux/dpdkstrip.py $(DPDKSTRIP_FLAGS) | \
@@ -6816,12 +6816,12 @@ include/odp-netlink.h: datapath/linux/compat/include/linux/openvswitch.h \
 	$(AM_V_GEN)$(run_python) $(srcdir)/build-aux/check-structs -I$(srcdir)/include $< && \
 	touch $@
 $(HSTAMP_FILES): build-aux/check-structs $(openflowinclude_HEADERS)
-#include/openvswitch/cxxtest.cc: \
-#	include/openvswitch/automake.mk $(top_builddir)/config.status
-#	$(AM_V_GEN){ echo "#include <config.h>"; \
-#	for header in $(openvswitchinclude_HEADERS); do	\
-#	  echo $$header; \
-#	done | sed 's,^include/\(.*\)$$,#include <\1>,'; } > $@
+include/openvswitch/cxxtest.cc: \
+	include/openvswitch/automake.mk $(top_builddir)/config.status
+	$(AM_V_GEN){ echo "#include <config.h>"; \
+	for header in $(openvswitchinclude_HEADERS); do	\
+	  echo $$header; \
+	done | sed 's,^include/\(.*\)$$,#include <\1>,'; } > $@
 cxx-check: $(openvswitchinclude_HEADERS)
 	@if LC_ALL=C grep -L 'extern "C"' $^ | \
           $(EGREP) -v 'version.h|compiler.h'; \

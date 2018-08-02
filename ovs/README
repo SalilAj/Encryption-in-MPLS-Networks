@@ -1,0 +1,9 @@
+Build Requirements:
+GCC 4.6 or later
+Linux kernel version 4.13.0-45-generic 
+/*The codeworks perfectly on kernel version 4.13, issues have been found while implementing it on version 4.15*/
+
+Compilation/Installation:
+run the script run.sh
+/*run.sh executes all the functions which builds the ovs code, installs it creates a kernel module and loads it on the kernel*/
+

@@ -34,7 +34,7 @@
 /* #undef ESX */
 
 /* Define to 1 if you have the <atomic> header file. */
-/* #undef HAVE_ATOMIC */
+#define HAVE_ATOMIC 1
 
 /* Define to 1 if you have backtrace(3). */
 #define HAVE_BACKTRACE 1

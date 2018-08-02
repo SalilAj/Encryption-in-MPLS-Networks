@@ -1,1 +1,0 @@
-cmd_/home/salil/Documents/OVSCode/ovs/datapath/linux/vport-lisp.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /home/salil/Documents/OVSCode/ovs/datapath/linux/vport-lisp.ko /home/salil/Documents/OVSCode/ovs/datapath/linux/vport-lisp.o /home/salil/Documents/OVSCode/ovs/datapath/linux/vport-lisp.mod.o ;  true

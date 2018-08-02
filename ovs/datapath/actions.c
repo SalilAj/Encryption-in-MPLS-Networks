@@ -29,6 +29,11 @@
 #include <linux/in6.h>
 #include <linux/if_arp.h>
 #include <linux/if_vlan.h>
+#include <linux/crypto.h>
+#include <linux/err.h>
+#include <linux/scatterlist.h>
+#include <crypto/aead.h>
+#include <linux/completion.h>
 
 #include <net/dst.h>
 #include <net/ip.h>
@@ -188,7 +193,6 @@ static void update_ethertype(struct sk_buff *skb, struct ethhdr *hdr,
 
 static void encrypt_data(struct sk_buff *skb)
 {
-	/*
 	char * data = skb_mac_header(skb) + skb->mac_len; //skb->data;
 	//printk("\n\nREACHED ENCRYPTION\n\n");
 	uint32_t messagelen = skb->len - skb->mac_len;//skb_headlen(skb);
@@ -204,7 +208,12 @@ static void encrypt_data(struct sk_buff *skb)
 		//printk("PPPPPPPPPPPP data1=%c\n", data[i]);
 	    data[i] = data[i] ^ 1;
 	    //printk("PPPPPPPPPPPP data2=%c", data[i]);
-	}*/
+	}
+}
+
+static void encrypt_data1(struct sk_buff *skb)
+{
+	
 	printk("ZZZZZZZZZZStarting encryption\n");
 
 	uint32_t messagelen = skb->len - skb->mac_len;
@@ -220,17 +229,17 @@ static void encrypt_data(struct sk_buff *skb)
     char *plaindata = skb_mac_header(skb) + skb->mac_len;
     char *cipherdata = NULL;
     char *gmacdata = NULL;
-    const u8 *key =  kmalloc(16, GFP_KERNEL);
+    u8 *key =  kmalloc(16, GFP_KERNEL);
 
     char *algo = "rfc4106(gcm(aes))";
     char *ivp = NULL;
-    int ret, i, d;
+    int ret, i;
     unsigned int iv_len;
     //unsigned int keylen = 16;
 
     /* Allocating a cipher handle for AEAD */
     tfm = crypto_alloc_aead(algo, 0, 0);
-    init_completion(&tresult.completion);
+    //init_completion(&tresult.completion);
 
     /*if(IS_ERR(tfm)) {
         pr_err("alg: aead: Failed to load transform for %s: %ld\n", algo,
@@ -246,7 +255,7 @@ static void encrypt_data(struct sk_buff *skb)
     }*/
 
     /* Allocting a callback function to be used , when the request completes */
-    aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG, aead_work_done, &tresult);
+    //aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG, aead_work_done, &tresult);
 
     crypto_aead_clear_flags(tfm, ~0);
 
@@ -301,7 +310,7 @@ static void encrypt_data(struct sk_buff *skb)
     sg_init_one(&ciphertext[0], cipherdata, messagelen);
     sg_init_one(&gmactext[0], gmacdata, 128);
     aead_request_set_crypt(req, plaintext, ciphertext, 16, ivp);
-    aead_request_set_assoc(req, gmactext, 16);
+    //make aead_request_set_assoc(req, gmactext, 16);
 
     ret = crypto_aead_encrypt(req);
 

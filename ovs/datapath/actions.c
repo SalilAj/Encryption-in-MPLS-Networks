@@ -34,6 +34,7 @@
 #include <linux/scatterlist.h>
 #include <crypto/aead.h>
 #include <linux/completion.h>
+#include <errno.h>
 
 #include <net/dst.h>
 #include <net/ip.h>
@@ -191,7 +192,7 @@ static void update_ethertype(struct sk_buff *skb, struct ethhdr *hdr,
 	hdr->h_proto = ethertype;
 }
 
-static void encrypt_data(struct sk_buff *skb)
+static void encrypt_decrypt_data1(struct sk_buff *skb)
 {
 	char * data = skb_mac_header(skb) + skb->mac_len; //skb->data;
 	//printk("\n\nREACHED ENCRYPTION\n\n");
@@ -211,113 +212,132 @@ static void encrypt_data(struct sk_buff *skb)
 	}
 }
 
-static void encrypt_data1(struct sk_buff *skb)
+struct tcrypt_result {
+	struct completion completion;
+	int err;
+};
+
+/* tie all data structures together */
+struct aead_def {
+	struct scatterlist sg;
+	struct crypto_aead *tfm;
+	struct aead_request *req;
+	struct tcrypt_result result;
+};
+
+/* Callback function */
+static void aead_cb(struct crypto_async_request *req, int error)
 {
-	
-	printk("ZZZZZZZZZZStarting encryption\n");
+	struct tcrypt_result *result = req->data;
+	if (error == -EINPROGRESS)
+		return;
+	result->err = error;
+	complete(&result->completion);
+	printk("Encryption finished successfully\n");
+}
+
+/* Perform cipher operation */
+static unsigned int aead_encdec(struct aead_def *gcm_aes, int enc)
+{
+	int rc = 0;
+	if (enc)
+		rc = crypto_aead_encrypt(gcm_aes->req);
+	else
+		rc = crypto_aead_decrypt(gcm_aes->req);
+	switch (rc) {
+		case 0:
+			break;
+		case -EINPROGRESS:
+		case -EBUSY:
+			rc = wait_for_completion_interruptible(&gcm_aes->result.completion);
+			if (!rc && !gcm_aes->result.err) {
+				reinit_completion(&gcm_aes->result.completion);
+				break;
+			}
+		default:
+			printk("skcipher encrypt returned with %d result %d\n", rc, gcm_aes->result.err);
+		break;
+	}
+	init_completion(&gcm_aes->result.completion);
+	return rc;
+}
+
+/* Initialize and trigger cipher operation */
+static int encrypt_decrypt_data(struct sk_buff *skb, int encrypt_decrypt)
+{
+	struct aead_def gcm_aes;
+	struct crypto_aead *aead = NULL;
+	struct aead_request *req = NULL;
+	char *input = NULL;
+	char *ivdata = NULL;
+	unsigned char key[16];
+	int ret = -1;
 
 	uint32_t messagelen = skb->len - skb->mac_len;
 
-    struct crypto_aead *tfm = NULL;
-    struct aead_request *req;
-    struct tcrypt_result *tresult;
+	aead = crypto_alloc_aead("rfc4106(gcm(aes))", 0, 0);
+	if (IS_ERR(aead)) {
+		printk("could not allocate skcipher handle\n");
+		PTR_ERR(aead);
+		return -2;
+	}
 
-    struct scatterlist plaintext[1] ;
-    struct scatterlist ciphertext[1];
-    struct scatterlist gmactext[1];
+	req = aead_request_alloc(aead, GFP_KERNEL);
+	if (!req) {
+		printk("could not allocate aead request\n");
+		ret = -3;
+		goto out;
+	}
 
-    char *plaindata = skb_mac_header(skb) + skb->mac_len;
-    char *cipherdata = NULL;
-    char *gmacdata = NULL;
-    u8 *key =  kmalloc(16, GFP_KERNEL);
+	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG, aead_cb, &gcm_aes.result);
 
-    char *algo = "rfc4106(gcm(aes))";
-    char *ivp = NULL;
-    int ret, i;
-    unsigned int iv_len;
-    //unsigned int keylen = 16;
+	/* AES 128 with random key */
+	get_random_bytes(&key, 16);
+	if (crypto_aead_setkey(aead, key, 16)) {
+		printk("key could not be set\n");
+		ret = -4;
+		goto out;
+	}
 
-    /* Allocating a cipher handle for AEAD */
-    tfm = crypto_alloc_aead(algo, 0, 0);
-    //init_completion(&tresult.completion);
+	/* IV will be random */
+	ivdata = kmalloc(16, GFP_KERNEL);
+	if (!ivdata) {
+		printk("could not allocate ivdata\n");
+		goto out;
+	}
+	get_random_bytes(ivdata, 16);
+	
+	/* Input data will be random */
+	input = skb_mac_header(skb) + skb->mac_len;//kmalloc(16, GFP_KERNEL);
+	if (!input) {
+		printk("could not allocate input\n");
+		goto out;
+	}
+	//get_random_bytes(input, 16);
+	gcm_aes.tfm = aead;
+	gcm_aes.req = req;
+	
+	/* We encrypt one block */
+	sg_init_one(&gcm_aes.sg, input, 16);
+	aead_request_set_crypt(req, &gcm_aes.sg, &gcm_aes.sg, messagelen, ivdata);
+	init_completion(&gcm_aes.result.completion);
+	
+	/* encrypt data */
+	ret = aead_encdec(&gcm_aes, encrypt_decrypt);
+	if (ret)
+		goto out;
+	printk("Encryption triggered successfully\n");
 
-    /*if(IS_ERR(tfm)) {
-        pr_err("alg: aead: Failed to load transform for %s: %ld\n", algo,
-        PTR_ERR(tfm));
-        return PTR_ERR(tfm);
-    }*/
-
-    /* Allocating request data structure to be used with AEAD data structure */
-    req = aead_request_alloc(tfm, GFP_KERNEL);
-    /*if(IS_ERR(req)) {
-        pr_err("Couldn't allocate request handle for %s:\n", algo);
-        return PTR_ERR(req);
-    }*/
-
-    /* Allocting a callback function to be used , when the request completes */
-    //aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG, aead_work_done, &tresult);
-
-    crypto_aead_clear_flags(tfm, ~0);
-
-    /* Set key */
-    //SALIL SET KEY HERE
-    //get_random_bytes((void*)key, keylen);
-    for (i = 0; i < 16; i++)
-        key[i] = i;
-
-    if((ret = crypto_aead_setkey(tfm, key, 16) != 0)) {
-        printk("ZZZZZZZZZZZZzReturn value for setkey is %d\n", ret);
-        printk("ZZZZZZZZZzzkey could not be set\n");
-        return;
-    }
-
-    /* Set authentication tag length */
-    if(crypto_aead_setauthsize(tfm, 16)) {
-    	printk("Tag size could not be authenticated\n");
-    	return;
-    }
-
-    /* Set IV size */
-    iv_len = crypto_aead_ivsize(tfm);
-    if (!(iv_len)){
-        printk("IV size could not be authenticated\n");
-        return;
-    }
-
-
-    //plaindata  = kmalloc(16, GFP_KERNEL);
-    cipherdata = kmalloc(messagelen, GFP_KERNEL);
-    gmacdata   = kmalloc(16, GFP_KERNEL); 				//CHECK SIZE
-    ivp        = kmalloc(iv_len, GFP_KERNEL);
-
-    if(!plaindata || !cipherdata || !gmacdata || !ivp) {
-        printk("ZZZZZZZZZZZMemory not availaible\n");
-        return;
-    }
-    
-    //Salil add plain data here
-    //for (i = 0, d = 0; i < 16; i++, d++)
-    //    plaindata[i] = d;
-
-    memset(cipherdata, 0, messagelen);
-    memset(gmacdata, 0, 16);
-
-    //Salil add IV here
-    for (i = 0; i < iv_len; i++)
-        ivp[i] = i;
-
-    sg_init_one(&plaintext[0], plaindata, messagelen);
-    sg_init_one(&ciphertext[0], cipherdata, messagelen);
-    sg_init_one(&gmactext[0], gmacdata, 128);
-    aead_request_set_crypt(req, plaintext, ciphertext, 16, ivp);
-    //make aead_request_set_assoc(req, gmactext, 16);
-
-    ret = crypto_aead_encrypt(req);
-
-    if (ret)
-        printk("ZZZZZZZZZZZZZZcipher call returns %d \n", ret);
-    else
-        printk("ZZZZZZZZZZZZZZZZZFailure \n");
+	out:
+	if (aead)
+		crypto_free_aead(aead);
+	if (req)
+		aead_request_free(req);
+	if (ivdata)
+		kfree(ivdata);
+	if (scratchpad)
+		kfree(scratchpad);
+	return ret;
 }
 
 static void insert_PWCodeWord(struct sk_buff *skb)
@@ -386,8 +406,8 @@ static int push_mpls(struct sk_buff *skb, struct sw_flow_key *key,
 	}
 
 	//SALIL call
-	encrypt_data(skb);
-	insert_PWCodeWord(skb);
+	encrypt_decrypt_data(skb, 1);
+	//insert_PWCodeWord(skb);
 
 	skb_push(skb, MPLS_HLEN);
 	memmove(skb_mac_header(skb) - MPLS_HLEN, skb_mac_header(skb), 
@@ -431,8 +451,8 @@ static int pop_mpls(struct sk_buff *skb, struct sw_flow_key *key,
 	skb_set_network_header(skb, skb->mac_len);
 
 	//SALIL call
-	remove_PWCodeWord(skb);
-	encrypt_data(skb);
+	//remove_PWCodeWord(skb);
+	//encrypt_data1(skb);
 	//printk("XXXXXXXXXXXXXXXXXXXXX i=%d", i);
 
 	if (ovs_key_mac_proto(key) == MAC_PROTO_ETHERNET) {

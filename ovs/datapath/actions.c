@@ -192,26 +192,6 @@ static void update_ethertype(struct sk_buff *skb, struct ethhdr *hdr,
 	hdr->h_proto = ethertype;
 }
 
-static void encrypt_decrypt_data1(struct sk_buff *skb)
-{
-	char * data = skb_mac_header(skb) + skb->mac_len; //skb->data;
-	//printk("\n\nREACHED ENCRYPTION\n\n");
-	uint32_t messagelen = skb->len - skb->mac_len;//skb_headlen(skb);
-
-	//printk("PPPPPPPPPPPP dataQ=%x\n", data);
-	//printk("PPPPPPPPPPPP dataR=%d\n", skb->mac_len);
-	//printk("PPPPPPPPPPPP dataS=%d\n", skb->len);
-	//printk("PPPPPPPPPPPP dataT=%d\n", skb->data_len);
-	//printk("PPPPPPPPPPPP dataU=%d\n", messagelen);
-
-	uint32_t i;
-	for(i = 0; i < messagelen; i++) {
-		//printk("PPPPPPPPPPPP data1=%c\n", data[i]);
-	    data[i] = data[i] ^ 1;
-	    //printk("PPPPPPPPPPPP data2=%c", data[i]);
-	}
-}
-
 struct tcrypt_result {
 	struct completion completion;
 	int err;
@@ -270,13 +250,6 @@ static int encrypt_data(struct sk_buff *skb)
 	unsigned int ivsize = 0;
 	uint32_t messagelen = skb->len - skb->mac_len;
 
-	char *mac_data_space = skb_put(skb, 16);
-	if(!mac_data_space)
-	{
-		printk("Unable to allocate tail space for MAC info");
-		return -2;
-	}
-
 	struct aead_def gcm_aes;
 	struct crypto_aead *aead = NULL;
 	struct aead_request *req = NULL;
@@ -287,12 +260,18 @@ static int encrypt_data(struct sk_buff *skb)
 
 	struct scatterlist plaintext[1];
 
-    unsigned char out[160];
-
 	unsigned char key[16] = {
         0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
         0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50
     };
+
+    char *mac_data_space = skb_put(skb, 16);
+	if(!mac_data_space)
+	{
+		printk("Unable to allocate tail space for MAC info");
+		return -2;
+		goto out;
+	}
 
 	aead = crypto_alloc_aead("gcm(aes)", 0, 0);
 	if (IS_ERR(aead)) {
@@ -350,10 +329,114 @@ static int encrypt_data(struct sk_buff *skb)
 	//Call encrypt function
 	ret = aead_encdec(&gcm_aes, 1);
 	if (ret)
+	{
 		ret = -7;
 		goto out;
+	}
 
 	printk("Encryption triggered successfully\n");
+
+	out:
+	if (aead)
+		crypto_free_aead(aead);
+	if (req)
+		aead_request_free(req);
+    if (ivp) 
+    	kfree(ivp);
+    if (keyp) 
+    	kfree(keyp);
+	return ret;
+}
+
+static int decrypt_data(struct sk_buff *skb)
+{
+	int ret = -1;
+	int i, d;
+	unsigned int ivsize = 0;
+	uint32_t messagelen = skb->len - skb->mac_len;
+
+	struct aead_def gcm_aes;
+	struct crypto_aead *aead = NULL;
+	struct aead_request *req = NULL;
+
+    unsigned char *cipherdata = skb_mac_header(skb) + skb->mac_len;
+    unsigned char *ivp 		 = NULL;
+    unsigned char *keyp 	 = NULL;
+
+	struct scatterlist ciphertext[1];
+
+	unsigned char key[16] = {
+        0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
+        0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50
+    };
+
+	aead = crypto_alloc_aead("gcm(aes)", 0, 0);
+	if (IS_ERR(aead)) {
+		printk("Could not allocate skcipher handle\n");
+		PTR_ERR(aead);
+		return -3;
+	}
+
+	req = aead_request_alloc(aead, GFP_KERNEL);
+	if (!req) {
+		printk("Could not allocate aead request\n");
+		ret = -4;
+		goto out;
+	}
+
+	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG, aead_cb, &gcm_aes.result);
+
+	crypto_aead_clear_flags(aead, ~0);
+
+	ivsize = crypto_aead_ivsize(aead);
+    
+    ivp        = kmalloc(ivsize, GFP_KERNEL);
+    keyp       = kmalloc(sizeof(key), GFP_KERNEL);
+
+    if (!ivp || !keyp) 
+    {
+    	printk("Data Allocation issue for Key and IV");
+    	ret = -5;
+    	goto out;
+	}
+
+	//Create and Set Key (random)
+    memcpy(keyp, key, sizeof(key));
+	if (crypto_aead_setkey(aead, keyp, sizeof(key))) {
+		printk("key could not be set\n");
+		ret = -6;
+		goto out;
+	}
+
+	//Create IV of value 1,2,3,4,.... (random)
+    memset(ivp, 0, ivsize);
+    for (i = 0,d=0xa8; i < ivsize; i++, d++)
+    	ivp[i] = d;
+	
+	sg_init_one(&ciphertext[0],  cipherdata,  512);
+
+	gcm_aes.tfm = aead;
+	gcm_aes.req = req;
+	
+	//Set Request handle
+	crypto_aead_setauthsize(aead, 16);
+	aead_request_set_crypt(req, ciphertext, ciphertext, messagelen - PWCD_HLEN, ivp);
+	aead_request_set_ad(req, 4);
+	init_completion(&gcm_aes.result.completion);
+	
+	//Call encrypt function
+	ret = aead_encdec(&gcm_aes, 0);
+	if (ret)
+	{
+		ret = -7;
+		goto out;
+	}
+	else
+	{
+		skb_trim(skb, skb->len - 16);
+	}
+
+	printk("Decryption triggered successfully\n");
 
 	out:
 	if (aead)
@@ -469,9 +552,8 @@ static int pop_mpls(struct sk_buff *skb, struct sw_flow_key *key,
 	skb_set_network_header(skb, skb->mac_len);
 
 	//SALIL call
-	//encrypt_data1(skb,0);
-	//remove_PWCodeWord(skb);
-	//printk("XXXXXXXXXXXXXXXXXXXXX i=%d", i);
+	decrypt_data(skb);
+	remove_PWCodeWord(skb);
 
 	if (ovs_key_mac_proto(key) == MAC_PROTO_ETHERNET) {
 		struct ethhdr *hdr;

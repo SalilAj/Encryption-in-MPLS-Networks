@@ -263,38 +263,29 @@ static unsigned int aead_encdec(struct aead_def *gcm_aes, int enc)
 }
 
 /* Initialize and trigger cipher operation */
-static int encrypt_data(struct sk_buff *skb, int encrypt_decrypt)
+static int encrypt_data(struct sk_buff *skb)
 {
-	//skb_mac_header(skb) + skb->mac_len;
 	int ret = -1;
+	int i, d;
 	unsigned int ivsize = 0;
-	int i;
-	unsigned char d;
 	uint32_t messagelen = skb->len - skb->mac_len;
 
 	char *mac_data_space = skb_put(skb, 16);
 	if(!mac_data_space)
 	{
-		printk("mac_data_space=%d", mac_data_space);
-		return 0;
+		printk("Unable to allocate tail space for MAC info");
+		return -2;
 	}
-	else
-	{
-		printk("Yo Success=%d", mac_data_space);
-	}
-	uint32_t Newmessagelen = skb->len - skb->mac_len;
 
 	struct aead_def gcm_aes;
 	struct crypto_aead *aead = NULL;
 	struct aead_request *req = NULL;
 
     unsigned char *plaindata = skb_mac_header(skb) + skb->mac_len;
-    //unsigned char *cipherdata = NULL;
-    unsigned char *ivp = NULL;
-    unsigned char *keyp = NULL;
+    unsigned char *ivp 		 = NULL;
+    unsigned char *keyp 	 = NULL;
 
 	struct scatterlist plaintext[1];
-    //struct scatterlist ciphertext[1];
 
     unsigned char out[160];
 
@@ -305,15 +296,15 @@ static int encrypt_data(struct sk_buff *skb, int encrypt_decrypt)
 
 	aead = crypto_alloc_aead("gcm(aes)", 0, 0);
 	if (IS_ERR(aead)) {
-		printk("could not allocate skcipher handle\n");
+		printk("Could not allocate skcipher handle\n");
 		PTR_ERR(aead);
-		return -2;
+		return -3;
 	}
 
 	req = aead_request_alloc(aead, GFP_KERNEL);
 	if (!req) {
-		printk("could not allocate aead request\n");
-		ret = -3;
+		printk("Could not allocate aead request\n");
+		ret = -4;
 		goto out;
 	}
 
@@ -321,150 +312,54 @@ static int encrypt_data(struct sk_buff *skb, int encrypt_decrypt)
 
 	crypto_aead_clear_flags(aead, ~0);
 
-	/* IV will be random */
 	ivsize = crypto_aead_ivsize(aead);
-    //printk("ivsize is %d\n", ivsize);
-
-    //plaindata  = kmalloc(16 + 512, GFP_KERNEL);
-    //cipherdata = kmalloc(messagelen + 16, GFP_KERNEL);
-    //hmacdata   = kmalloc(16, GFP_KERNEL);
+    
     ivp        = kmalloc(ivsize, GFP_KERNEL);
     keyp       = kmalloc(sizeof(key), GFP_KERNEL);
 
-    if (!plaindata || !ivp || !keyp) 
+    if (!ivp || !keyp) 
     {
-    	printk("Data Allocation issue");
+    	printk("Data Allocation issue for Key and IV");
+    	ret = -5;
     	goto out;
 	}
 
-	*out = 0;
-    printk("before encryption set Plaindata");
-    for (i = 0; i < messagelen; i++) {
-
-        snprintf((char*)out, sizeof(out), "%s 0x%02x", out, plaindata[i]);
-        if ((i % 8)==7) {
-            printk("%d %s\n", i+1 , out);
-            *out = 0;
-        }
-    }
-
-	/*out = 0;
-    printk("Before encryption set Plaindata");
-    for (i = 0; i < messagelen; i++) {
-
-        snprintf((char*)out, sizeof(out), "%s 0x%02x", out, plaindata[i]);
-        if ((i % 8)==7) {
-            printk("%d %s\n", i+1 , out);
-            *out = 0;
-        }
-    }*/
-
-	/**out = 0;
-    printk("Before encryption set Cipherdata");
-    for (i = 0; i < messagelen + 16; i++) {
-
-        snprintf((char*)out, sizeof(out), "%s 0x%02x", out, cipherdata[i]);
-        if ((i % 8)==7) {
-            printk("%d %s\n", i+1 , out);
-            *out = 0;
-        }
-    }*/
-
-    //memset(plaindata, 0, 16 + 512);
-    /*for (i = 0, d = 0; i < 16 + 512; i++, d++)
-	{
-        plaindata[i] = d;
-        //printk("Plaindata = %x", plaindata[i]);
-	}*/
-
-	//memset(cipherdata, 0, messagelen + 16);
-
-    //memset(hmacdata, 0, 16);
-    memset(ivp, 0, ivsize);
+	//Create and Set Key (random)
     memcpy(keyp, key, sizeof(key));
-
-	/* AES 128 with random key */
 	if (crypto_aead_setkey(aead, keyp, sizeof(key))) {
 		printk("key could not be set\n");
-		ret = -4;
+		ret = -6;
 		goto out;
 	}
 
-	// Fill iv with a8, a9, aa, ...
+	//Create IV of value 1,2,3,4,.... (random)
+    memset(ivp, 0, ivsize);
     for (i = 0,d=0xa8; i < ivsize; i++, d++)
     	ivp[i] = d;
 	
 	sg_init_one(&plaintext[0],  plaindata,  512);
-    //sg_init_one(&ciphertext[0], cipherdata, 512);
-    //sg_init_one(&hmactext[0],   hmacdata, 16);
 
-	//get_random_bytes(input, 16);
 	gcm_aes.tfm = aead;
 	gcm_aes.req = req;
 	
-	/* We encrypt one block */
-	//sg_init_one(&gcm_aes.sg, plaintext, 16);
-	aead_request_set_crypt(req, plaintext, plaintext, messagelen - 4, ivp);
+	//Set Request handle
+	aead_request_set_crypt(req, plaintext, plaintext, messagelen - PWCD_HLEN, ivp);
 	aead_request_set_ad(req, 4);
 	init_completion(&gcm_aes.result.completion);
 	
-	/* encrypt data */
-	ret = aead_encdec(&gcm_aes, encrypt_decrypt);
+	//Call encrypt function
+	ret = aead_encdec(&gcm_aes, 1);
 	if (ret)
+		ret = -7;
 		goto out;
+
 	printk("Encryption triggered successfully\n");
-
-	//printk("Sizmme of plaintext %d", sizeof(plaintext));
-	/*printk("Plaindata result:\n");
-    *out = 0;
-    for (i = 0; i < 512; i++) {
-
-        snprintf((char*)out, sizeof(out), "%s 0x%02x", out, plaindata[i]);
-        if ((i % 8)==7) {
-            printk("%s\n", out);
-            *out = 0;
-        }
-    }*/
-
-    *out = 0;
-    printk("After encryption set Cipherdata");
-    for (i = 0; i < Newmessagelen; i++) {
-
-        snprintf((char*)out, sizeof(out), "%s 0x%02x", out, plaindata[i]);
-        if ((i % 8)==7) {
-            printk("%d %s\n", i+1 , out);
-            *out = 0;
-        }
-    }
-
-	/*printk("Cipherdata result:\n");
-    *out = 0;
-    for (i = 0; i < 1024; i++) {
-
-        snprintf((char*)out, sizeof(out), "%s 0x%02x", out, cipherdata[i]);
-        if ((i % 8)==7) {
-            printk("%d %s\n", i, out);
-            *out = 0;
-        }
-    }*/
-    /*printk("%s\nMAC output:", out);
-    *out = 0;
-    for (i = 0; i < 16; i++) {
-        snprintf((char *)out, sizeof(out), "%s 0x%02x", out, hmacdata[i]);
-    }
-    printk("%s\n", out);*/
 
 	out:
 	if (aead)
 		crypto_free_aead(aead);
 	if (req)
 		aead_request_free(req);
-    /*if (plaindata) 
-    	kfree(plaindata);*/
-    /*if (cipherdata) 
-    	kfree(cipherdata);
-    if (hmacdata) 
-    	kfree(hmacdata);*/
     if (ivp) 
     	kfree(ivp);
     if (keyp) 
@@ -494,7 +389,7 @@ static void insert_PWCodeWord(struct sk_buff *skb)
 	new_pwcd_hdr = pwcd_hdr(skb);
 
 	//Fills the space with the PWCD data
-	new_pwcd_hdr->control_word_data = 0;//some value;
+	new_pwcd_hdr->control_word_data = 0; //some value;
 
 }
 
@@ -506,7 +401,6 @@ static void remove_PWCodeWord(struct sk_buff *skb)
 		skb->mac_len);
 
 	__skb_pull(skb, PWCD_HLEN);
-
 
 	skb_reset_mac_header(skb);
 	skb_set_network_header(skb, skb->mac_len);
@@ -531,7 +425,7 @@ static int push_mpls(struct sk_buff *skb, struct sw_flow_key *key,
 
 	//SALIL call
 	insert_PWCodeWord(skb);
-	encrypt_data(skb,1);
+	encrypt_data(skb);
 
 	skb_push(skb, MPLS_HLEN);
 	memmove(skb_mac_header(skb) - MPLS_HLEN, skb_mac_header(skb), 
@@ -575,8 +469,8 @@ static int pop_mpls(struct sk_buff *skb, struct sw_flow_key *key,
 	skb_set_network_header(skb, skb->mac_len);
 
 	//SALIL call
+	//encrypt_data1(skb,0);
 	//remove_PWCodeWord(skb);
-	//encrypt_data1(skb);
 	//printk("XXXXXXXXXXXXXXXXXXXXX i=%d", i);
 
 	if (ovs_key_mac_proto(key) == MAC_PROTO_ETHERNET) {

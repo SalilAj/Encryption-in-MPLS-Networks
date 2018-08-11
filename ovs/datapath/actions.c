@@ -51,6 +51,9 @@
 #include "vport.h"
 #include "flow_netlink.h"
 
+__be16 encryption_counter = 0;
+__be16 decryption_counter = 0;
+
 static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			      struct sw_flow_key *key,
 			      const struct nlattr *attr, int len);
@@ -313,8 +316,15 @@ static int encrypt_data(struct sk_buff *skb)
 
 	//Create IV of value 1,2,3,4,.... (random)
     memset(ivp, 0, ivsize);
-    for (i = 0,d=0xa8; i < ivsize; i++, d++)
+    for (i = 0,d=0xa8; i < ivsize - 2; i++, d++)
     	ivp[i] = d;
+
+    memcpy(ivp + ivsize - 2, &encryption_counter, sizeof(encryption_counter));
+
+    for(i = 0; i < ivsize; i++)
+    {
+    	printk("IV[%d]=%x",i,ivp[i]);
+    }
 	
 	sg_init_one(&plaintext[0],  plaindata,  512);
 
@@ -332,6 +342,10 @@ static int encrypt_data(struct sk_buff *skb)
 	{
 		ret = -7;
 		goto out;
+	}
+	else
+	{
+		encryption_counter++;
 	}
 
 	printk("Encryption triggered successfully\n");
@@ -352,6 +366,7 @@ static int decrypt_data(struct sk_buff *skb)
 {
 	int ret = -1;
 	int i, d;
+	unsigned int nonce;
 	unsigned int ivsize = 0;
 	uint32_t messagelen = skb->len - skb->mac_len;
 
@@ -362,6 +377,13 @@ static int decrypt_data(struct sk_buff *skb)
     unsigned char *cipherdata = skb_mac_header(skb) + skb->mac_len;
     unsigned char *ivp 		 = NULL;
     unsigned char *keyp 	 = NULL;
+
+    struct pw_codeword_hdr *new_pwcd_hdr;
+    new_pwcd_hdr = pwcd_hdr(skb);
+    printk("SEQUENCE NUMBER RECEIVED =%d", new_pwcd_hdr->sequence_number);
+    nonce =  new_pwcd_hdr->sequence_number;
+    printk("decryption_counter:%d", decryption_counter);
+    printk("DEC nonce:%d",nonce);
 
 	struct scatterlist ciphertext[1];
 
@@ -410,9 +432,27 @@ static int decrypt_data(struct sk_buff *skb)
 
 	//Create IV of value 1,2,3,4,.... (random)
     memset(ivp, 0, ivsize);
-    for (i = 0,d=0xa8; i < ivsize; i++, d++)
+    for (i = 0, d=0xa8; i < ivsize - 2; i++, d++)
     	ivp[i] = d;
-	
+
+    if(decryption_counter % 65536 == nonce)
+    {
+    	printk("match:%d", decryption_counter % 65536);
+    	memcpy(ivp + ivsize - 2, &decryption_counter, sizeof(decryption_counter));
+
+    	for(i = 0; i < ivsize; i++)
+    	{
+    		printk("IV[%d]=%x",i,ivp[i]);
+    	}
+    }
+    else
+    {
+    	decryption_counter = decryption_counter + 2;
+    	ret = -8;
+    	printk("Dropping packet, decryption_counter=%d", decryption_counter);
+    	goto out;
+    }
+
 	sg_init_one(&ciphertext[0],  cipherdata,  512);
 
 	gcm_aes.tfm = aead;
@@ -433,6 +473,7 @@ static int decrypt_data(struct sk_buff *skb)
 	}
 	else
 	{
+		decryption_counter ++;
 		skb_trim(skb, skb->len - 16);
 	}
 
@@ -454,6 +495,7 @@ static void insert_PWCodeWord(struct sk_buff *skb)
 {
 	//Initialize header
 	struct pw_codeword_hdr *new_pwcd_hdr;
+	unsigned int nonce;
 
 	//Check for space of size PWCD_HLEN in headroom if less, return else continue
 	if (skb_cow_head(skb, PWCD_HLEN) < 0)
@@ -472,7 +514,19 @@ static void insert_PWCodeWord(struct sk_buff *skb)
 	new_pwcd_hdr = pwcd_hdr(skb);
 
 	//Fills the space with the PWCD data
-	new_pwcd_hdr->control_word_data = 0; //some value;
+	new_pwcd_hdr->control_word_data = 0; //some value depending on flags;
+
+	if(encryption_counter == 65535)
+	{
+		encryption_counter = 0;
+		//call key exchange to reset IV, counter and key;
+	}
+
+	nonce = encryption_counter % 65536;
+	printk("Enc Nonce:%d", nonce);
+	new_pwcd_hdr->sequence_number = nonce;
+
+	printk("SEQUENCE NUMBER SENT =%d", new_pwcd_hdr->sequence_number);
 
 }
 
@@ -552,7 +606,12 @@ static int pop_mpls(struct sk_buff *skb, struct sw_flow_key *key,
 	skb_set_network_header(skb, skb->mac_len);
 
 	//SALIL call
-	decrypt_data(skb);
+	err = decrypt_data(skb);
+	if(err == -8)
+	{
+		return -1;
+	}
+
 	remove_PWCodeWord(skb);
 
 	if (ovs_key_mac_proto(key) == MAC_PROTO_ETHERNET) {
@@ -1570,6 +1629,10 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 
 		case OVS_ACTION_ATTR_POP_MPLS:
 			err = pop_mpls(skb, key, nla_get_be16(a));
+			if(err == -1)
+			{
+				a = nla_next(a, &rem);
+			}
 			break;
 
 		case OVS_ACTION_ATTR_PUSH_VLAN:

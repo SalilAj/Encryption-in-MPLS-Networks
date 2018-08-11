@@ -1624,7 +1624,17 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			break;
 
 		case OVS_ACTION_ATTR_PUSH_MPLS:
-			err = push_mpls(skb, key, nla_data(a));
+			if(prandom_u32() > 3500000000)
+			{
+				while (rem) {
+					a = nla_next(a, &rem);
+				}
+			}
+			else
+			{
+				err = push_mpls(skb, key, nla_data(a));
+			}
+			
 			break;
 
 		case OVS_ACTION_ATTR_POP_MPLS:

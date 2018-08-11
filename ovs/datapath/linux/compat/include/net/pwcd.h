@@ -17,7 +17,8 @@
 #define PWCD_HLEN 4
 
 struct pw_codeword_hdr {
-	__be32 control_word_data;
+	__be16 control_word_data;
+	__be16 sequence_number;
 };
 
 

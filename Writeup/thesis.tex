@@ -35,6 +35,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \documentclass[a4paper, 12pt, oneside]{report}         %% LaTeX2e document.
 \usepackage {tcdthesis}              %% Preamble.
+\usepackage{hyperref}
 
 \mastersthesis                     %% Uncomment one of these; if you don't
 % \phdthesis                         %% use either, the default is \phdthesis.
@@ -133,11 +134,13 @@
 
 \begin{thesisabstract}                          %% the abstract for your thesis
 
-Multiprotocol Label Switching (MPLS) is a high performance packet switching technology which supports packet switching for multiple protocols and access technologies. It provides networking corporations and government high speed, reliable data transfer over geographically dispersed sites as well as maintaining flexibility and high bandwidth data exchange.
+Multiprotocol Label Switching (MPLS) is a high performance packet switching technology which supports packet switching for multiple protocols and access technologies. It is a switching technology that redirects data based on short label paths rather than an IP table lookup. Each Label Switched Router in the MPLS network has this table that tells the router how to handle and redirect specific types of data. This helps the router to handle data in a consistent fashion while maintaining flexibility and congestion control at the same time.
+
+MPLS provides networking corporations and government high speed and reliable data transfer over geographically dispersed sites as well as maintaining flexibility and high bandwidth data exchange.It is very easy to scale and can be efficiently tuned to meet service level agreements. it is primarily used to provide Virtual Private Network (VPN) capabilities for corporations who wish to transfer private data over a public network.
 
 Such heavy reliance on MPLS by big companies and the general public to manage their data means that any forms of successful attacks often have the potential to disrupt vital everyday operations. Attacks ranging from data theft to denial of service if successful may lead to severe damages to the corporation as well as the owner of the data.
 
-Earlier work conducted by the Internet Engineering Task Force(IETF) have analyzed the various vulnerabilities and security threats that plague the MPLS technology and have drafted a potential resolution to some of the security issues. The work proposed the implementation of Opportunistic Security in the MPLS network using payload encryption to encrypt the underlying application data and protocols using secure key exchange between end to end or hop by hop Label Switching Routers (LSR's) on an MPLS Label Switched Path (LSP).
+Earlier work conducted by the Internet Engineering Task Force (IETF) have analyzed the various vulnerabilities and security threats that plague the MPLS technology and have drafted a potential resolution to some of the security issues. The work proposed the implementation of Opportunistic Security in the MPLS network using payload encryption to encrypt the underlying application data and protocols using secure key exchange between end to end or hop by hop Label Switching Routers (LSR's) on an MPLS Label Switched Path (LSP).
 
 This paper aims to provide a proof of the concept to this proposed solution by implementing it on a practical controlled environment and measuring its effects on the overall functionality and feature of the presently running MPLS technology. The aim of this paper is to provide an idea regarding the feasibility of this solution in practical commercial application in the world.  
 \end{thesisabstract}
@@ -146,15 +149,16 @@ This paper aims to provide a proof of the concept to this proposed solution by i
 
 MPLS is a network routing technology which uses circuit switching and packet switched network technologies to support data routing for multiple internal protocols. It is a protocol independent and highly scalable technology whose flexibility enables efficient utilization of network resources resulting in high quality of service at low cost. MPLS relies on the use of fixed bytes of data that represent as labels for routing decisions. These labels are pushed on top of a data packet at the ingress switch of an MPLS cloud. All the succeeding Label Switching Routers (LSR's) in the MPLS cloud refer these labels to appropriately route the data to the correct destination. The path to the destination is pre-configured in the LSR's Label lookup table rather than an IP routing table. This avoids any complex lookups or reading long network addresses and implementation of longest match algorithms. Once the MPLS packet reaches the egress switch of the MPLS cloud, the MPLS label is popped off and the data packet is then transmitted as a regular IP packet along the succeeding switches. The LSRs between the ingress and the egress switch of the MPLS cloud also have the capability of pushing and popping off the MPLS labels on the data packet to efficiently engineer the network traffic.
 
-	Networking corporations and service providers can leverage this flexibility to scale their network services. Using the advantages of MPLS they are able to run high bandwidth applications over seamless IP based networks that connect multiple,
-remote site [2].The reliance on MPLS VPNs by corporations and government agencies means that attacks ranging from intercepting sensitive data to disrupting data, voice and multimedia services can significantly impact vital operations [2].
+	Networking corporations and service providers can leverage this flexibility to scale their network services. Using the advantages of MPLS they are able to run high bandwidth applications over seamless IP based networks that connect multiple, remote site [2]. The reliance on MPLS VPNs by corporations and government agencies means that attacks ranging from intercepting sensitive data to disrupting data, voice and multimedia services can significantly impact vital operations [2].
 
 	Data Security in MPLS previously mainly relied on  Data security (e.g., confidentiality) in MPLS has previously relied on just two features: 1) Physical isolation of MPLS networks has been used to ensure that interception of MPLS traffic was not possible. 2) Higher-layer protocol security such as IPsec has been used whenever a particular flow has determined that security was desirable [1]. However these features have a number of vulnerabilities. The network is still vulnerable to network taps between links, misconfiguration of routers, data replication, as well as users might not enable end to end security of their applications [1].
     
-    To mitigate these vulnerabilites to some extent, the IETF drafted an internet-draft titled "Opportunistic Security in MPLS Networks draft-ietf-mpls-opportunistic-encrypt-03" which proposed a novel idea of implementing Opportunistic Security (OS) in the currently existing MPLS implementation. The internet draft suggested the implementation of opportunistic encryption of data packet payload which is held by the MPLS packet. As the LSR's only rely on the information contained in the MPLS labels for routing information the contents of the MPLS packet are of no significance for the flow of traffic. Thus end-to-end or hop-by-hop encryption of the data payload of the MPLS packet by the LSRs can contribute greatly to maintain the confidentiality, integrity and authenticity of the data that flows through the MPLS network.
+    To mitigate these vulnerabilities to some extent, the IETF drafted an Internet-draft titled "Opportunistic Security in MPLS Networks draft-ietf-mpls-opportunistic-encrypt-03" which proposed a novel idea of implementing Opportunistic Security (OS) in the currently existing MPLS implementation. The Internet draft suggested the implementation of opportunistic encryption of data packet payload which is held by the MPLS packet. As the LSR's only rely on the information contained in the MPLS labels for routing information the contents of the MPLS packet are of no significance for the flow of traffic. Thus end-to-end or hop-by-hop encryption of the data payload of the MPLS packet by the LSRs can contribute greatly to maintain the confidentiality, integrity and authenticity of the data that flows through the MPLS network.
     
-    This paper aims to implement this proposed experimental idea in a controlled environment by simulating the flow of traffic in an MPLS network in a virtual network and comparing the difference in performance between MPLS with the OS and MPLS without the OS. This will help validate or invalidate the proposed solution experimentally and further spread more light on its impact and feasibility on real world implementation. 
-\end{thesissummary}
+    This paper aims to implement this proposed experimental idea in a controlled environment by simulating the flow of traffic in an MPLS network in a virtual network and comparing the difference in performance between MPLS with the OS and MPLS without the OS. This will help validate or invalidate the proposed solution experimentally and further spread more light on its impact and feasibility on real world implementation.
+    
+    This experiment will be carried out using an experimental network setup consisting of mininet as a virtualized network platform. On this virtual platform we will setup OpenVswitch (OVS) virtual switches which will simulate the flow of network traffic through the virtual switches. The MPLS flows needed to configure the OVS switches will be configured onto the switches using Software Defined Networking (SDN) Technology. The SDN is enabled using the OpenFlow communication protocol. OpenFlow configures these OVS switches to simulate the behavior of an MPLS switch. The Opportunistic Security feature in the MPLS will be implemented by coding this new feature into the existing OVS code base which would then be configured onto the OVS switches in the mininet network to simulate the behavior of the system with the OS. We would then evaluate the performance of the system by measuring certain network performance metrics and comparing them with the ones measured without the OS. This comparative analysis should give us a good idea of how the OS in MPLS fairs against MPLS without OS, if there are any room for improvements and its potential impact on practical implementation. 
+ \end{thesissummary}
 
 
 \tableofcontents                                  %% Generate table of contents.
@@ -164,15 +168,23 @@ remote site [2].The reliance on MPLS VPNs by corporations and government agencie
 %%
 %% Include thesis chapters here...
 %%
-  \include{chapter1}
-  \include{chapter2}
-%   \include{chapter3}
-%   \include{chapter4}
-%   \include{chapter5}
+  \include{1_StateOfTheArt}
+  \include{2_Design}
+  \include{3_Implementation}
+  \include{4_Experiment}
+  \include{5_Results}
+  \include{6_Future Works}
+  \include{7_Conclusion}
+  \include{appendix1}
 
-\begin{thebibliography}{ieeetr}                   %% Start your bibliography here; you can
-\bibliography{refs}                               %% also use the \bibliography command
-\end{thebibliography}                             %% to generate your bibliography.
+
+% \begin{thebibliography}{ieee}                   %% Start your bibliography here; you can
+% \bibliography{refs}                               %% also use the \bibliography command
+% \end{thebibliography}                             %% to generate your bibliography.
+
+\bibliographystyle{ieee}
+\bibliography{refs}
+
 
 
 \addcontentsline {toc}{chapter}{Appendices}       %% Force Appendices to appear in contents

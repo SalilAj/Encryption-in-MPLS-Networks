@@ -33,7 +33,36 @@ evidence for that, so don't overclaim!
 
 COMMIT
 
+- page viii: "we will setup" is the wrong tense - you should be saying
+what has been done, not what will be done (except for the future 
+work section)
 
+- page viii: "give us a good idea" is overstated
 
+- page 1: "IP routing is a destination based routing protocol" is 
+not true.  IP routing is not *a* protocol at all.
+Please make sure you get the initial bits of text in each section
+very correct - readers are more likely to get the wrong or a bad
+idea if there're errors in places like that.
+
+- page 1: you keep saying "switch" - you may want to add a footnote
+saying that when yoy say switch, you mean switch or router or 
+something like that to make clear you know they differ.
+
+- page 6: are the bottom of stack bit values correct? I thought
+the value was 1 for the label just before the payload and 
+furthest from the ethernet header?
+
+- page 6: TTL issues are more likely due to errors and not
+attacks
+
+- page 6: "grave concern" is overstated, don't do that
+
+- page 7: It's "IPsec" not "IPSEC" (really:-)
+
+- page 7: I don't believe 30% of web sites use IPsec.
+Please check that fact again.
+
+COMMIT
 
 

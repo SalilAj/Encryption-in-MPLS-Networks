@@ -11,4 +11,29 @@ avoid such unnecessary editorialising)
 aims (humans do) and doesn't "provide" the PoC - the thesis *describes*
 the PoC. 
 
+COMMMIT
+
+- page vi: what's an "internal" protocol?
+
+- page vii: s/was mainly relied on/mainly relied on/
+
+- page vii: there's physical isolation, IPsec and also MACsec, so 3 not
+2 options
+
+- page vii: refer to RFC 7435 for definition of OS, maybe include some quotes from
+that RFC. The definition of OS can be contentious, so you want to be able
+to point to one and not assume the reader agrees with what you think it
+means:-)
+
+- page vii: "can contribute greatly" is overstated - we don't have the
+evidence for that, so don't overclaim!
+
+- page vii; "this paper" is wrong, this is a thesis, and it doesn't
+"implement," it describes the implementation
+
+COMMIT
+
+
+
+
 

@@ -1,0 +1,14 @@
+
+- page iv: don't mention congestion control, it's not done by MPLS, but is
+in fact made more difficult by (some) MPLS deployments. I think you 
+mean "traffic engineering."
+
+- page v: The IETF doesn't "do" work - s/by/in/ and don't say "plague" as
+that's too subjective unless you can back it up via reference (generally
+avoid such unnecessary editorialising)
+
+- page v: "this thesis aims to provide..." is wrong - the thesis has no
+aims (humans do) and doesn't "provide" the PoC - the thesis *describes*
+the PoC. 
+
+

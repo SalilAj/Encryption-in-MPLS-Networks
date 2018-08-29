@@ -87,3 +87,28 @@ mitigated by this work, that needs to be somewhere to tie
 together the problem and solution
 
 COMMIT
+
+- p19, things here need references, e.g. tls is rfc8446 now,
+etc.
+
+- p21, I'm still not sure about this PW encryption stuff - are you
+*sure* they're really encrypting? There are VPNs that are really
+PWs but they don't encrypt in any useful way iiuc. Be sure you
+get this one right! (And I'd be interested in the explanation.)
+
+- p24, you need to say GCM is an AEAD mode and refer to RFC5116.
+
+- p27, the seq num in the CW is not the nonce, but is the
+low-order 16 bits of the nonce.
+
+- p35, somewhere (not sure if before here or after) you need
+to explain your implementation
+
+- p36, usually good to visibly distinguish commands a person might
+type, but if you're out of time don't bother
+
+- p40, linux kernel crypto api needs a reference or footnote
+
+- p41, skb needs a reference/footnote
+
+COMMIT

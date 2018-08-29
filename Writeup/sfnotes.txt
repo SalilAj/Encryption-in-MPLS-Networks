@@ -65,4 +65,25 @@ Please check that fact again.
 
 COMMIT
 
+- page 7: LDP - you didn't introduce that, be good to add a bit
+of text saying what it is/does
 
+- p7, you didn't say what GMPLS is - all acronyms need to be
+defined on 1st use (same for PE)
+
+- p9, some broken references there
+
+- p11, "sniffing" isn't a great term and you should reference
+things like upstream [1] (not the wikipedia page but some
+of its references) as that's the real threat we're trying to
+counter here. To be clear - the threat is that (particularly
+subsea) fibre operators collude with govs to copy bits off
+of MPLS routers.
+
+   [1] https://en.wikipedia.org/wiki/Upstream_collection
+
+- p17, 1.3.1 didn't say which threats are (hoped to be)
+mitigated by this work, that needs to be somewhere to tie
+together the problem and solution
+
+COMMIT

@@ -112,3 +112,20 @@ type, but if you're out of time don't bother
 - p41, skb needs a reference/footnote
 
 COMMIT
+
+- p50 - is that a 50ms RTT for plan MPLS and a 125 ms RTT for
+MPLS OS? That's too long IMO, should be 1000x quicker on a
+local connection. I think you should explain why, or say that you're
+not curently sure. And why the bipolar y-values for mpls-oe?
+
+- p51, sections 4.2 and 4.3 - what's the deal here? 
+
+- yeah chapter 4 is light. Any more useful stuff you can add
+there is worthwhile.
+
+- p53 - yep, that chapter is light-weight be no har to take
+a peek later see if we can increase "interest" desl likely
+with Trump?
+
+DONE - please re-read the notes above
+

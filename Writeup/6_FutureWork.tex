@@ -1,1 +1,17 @@
 \chapter{Future Work}
+\subsection*{Implementation of Key Exchange}
+Another important part of the MPLS OS not covered in this project is the initial Key Exchange between the LSRs implementing the MPLS OS. Before Encryption can begin the two participating LSR's need to agree upon an encryption key. Rather than using a key transport mechanism the aim of OS is to implement a 'key agreement' mechanism that can securely be used to agree upon a key value.
+
+This can be done using a Diffie-Hellman Key exchange. The LSR's should also be able to  support a key exchange in the middle of data transmission and gracefully shift to the newly agreed key without any disruption in the flow of packets due to mismatched keys. Thus the LSR's should have the capability to handle at least 2 keys for a given LSP. After the agreement of the new key the encrypting LSR should start encrypting the new packets with the newly agreed upon key. Similarly at the decrypting LSR, once it starts receiving packets encrypted with the new key then the LSR should discard the old key. It is recommended that the key on an LSP be changed at least once every day or every 10 raised to 6 packets whichever is sooner, and MUST change keys before encrypting 2 raised to 64 packets \cite{mpls-os-internet-draft}.
+
+
+\subsection*{Implementation of Monitoring tools}
+Measuring the performance metrics and monitoring the behavior of OpenVSwitch at the Kernel module level is a difficult task. There is no easy to use tool that helps in monitoring OpenVSwitch without the tool adding it own overheads at the kernel level.
+
+\cite{zha2018instrumenting} have suggested certain monitoring designs and tested them  on OpenVSwitch by tooling it with monitoring capabilities.Using a combination of Flow Capture Schema (FCAP) and Sketch based monitoring (SMON) designs the authors were able to monitor OpenVSwitch internally with little to no overhead introduced by the tools. It would be worthwhile to investigate its implementation for further closely monitoring MPLS OS as the insight gained by data gather from these tools might prove invaluable. 
+
+
+\subsection*{Implementation on bare metal switches}
+An ideal scenario to evaluate the performance of OS is to implement it on production networks using production level bare metal switches. The behavior of the switch as it responds to the variety of traffic that flows through it as it implements OS would be interesting to observe and may provide valuable insight into its performance.
+
+This however may prove difficult to implement as the cost of experimentation may be too high and its effects may impair service level agreements of currently running data flows.

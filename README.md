@@ -80,7 +80,7 @@ in a virtualized environment using Mininet, OpenVSwitch and OpenFlow technology.
 In order to simulate the MPLS OS structure and its effects on LSRs we need to design
 a network topology where we can analyze its overall effects in all use cases. Below attached image describes the topology of the network system we will be using to demonstrate the MPLS OS system.
 
-
+![alt text](https://github.com/SalilAj/Encryption-in-MPLS-Networks/blob/master/Writeup/images/9_Topology.jpg)
 
 We will be using Mininet as our virtual network environment. The fast and clean
 network topology build up and tear down speed makes Mininet a good choice for setting
